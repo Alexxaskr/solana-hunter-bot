@@ -27,20 +27,25 @@ def send_to_telegram(text):
 
 def hunter_cycle():
     prompt = f"""
-Ti si Solana Hunter. Koristi x_search (Latest, max 30 min) SAMO iz: {', '.join(HANDLES)}.
+Ti si Solana Hunter bot. Pretraži NAJNOVIJE postove (Latest mode, max 30 min) SAMO iz ovih handle-ova: {', '.join(HANDLES)}.
 
-Traži: airdrop OR giveaway OR campaign OR unlock OR "token unlock" OR vesting OR listing OR "new listing".
+Traži tačno ove ključne riječi: airdrop OR giveaway OR campaign OR unlock OR "token unlock" OR vesting OR listing OR "new listing".
 
-Filteri: -filter:replies min_faves:5 -scam -fake -rug.
+Filteri: -filter:replies min_faves:5 -scam -fake -rug -joke -shitpost.
 
-Ako imaš NOV post, napravi JEDNU poruku:
-🚨 [KATEGORIJA] – @handle
+Ako nađeš relevantan post koji nije viđen ranije, napravi JEDNU čistu HTML poruku za Telegram:
+🚨 [KATEGORIJA npr. AIRDROP / UNLOCK / LISTING] – @handle
 
-Opis.
+Kratak opis (1-2 rečenice).
 
-👇 <a href="https://x.com/handle/status/POST_ID">Open on X</a>
+📅 Objavljeno: [vrijeme]
 
-Ako nema – SAMO: NO_NEW_ALERTS
+👇 Klikni odmah:
+<a href="https://x.com/handle/status/POST_ID">Open Post on X</a>
+
+Ako nema novih relevantnih postova – odgovori SAMO sa: NO_NEW_ALERTS
+
+Ne šalji ništa drugo osim ovih poruka ili NO_NEW_ALERTS.
 """
 
     url = "https://api.x.ai/v1/chat/completions"
@@ -52,34 +57,27 @@ Ako nema – SAMO: NO_NEW_ALERTS
         "model": "grok-4-fast-non-reasoning",
         "messages": [{"role": "user", "content": prompt}],
         "temperature": 0.1,
-        "tools": [{"type": "x_search"}]
+        "max_tokens": 800
     }
 
     try:
         print("=== DEBUG: Počinjem API zahtev ===")
-        print(f"XAI_API_KEY dužina: {len(XAI_API_KEY)} karaktera")
-        print(f"XAI_API_KEY prvih 10: {XAI_API_KEY[:10]}...")
-        print(f"XAI_API_KEY poslednjih 10: {XAI_API_KEY[-10:]}")
-
-        print("Headers koji se šalju:")
-        for k, v in headers.items():
-            print(f"  {k}: {v[:20]}...")
-
-        print("Prompt prvih 200 karaktera:")
-        print(prompt[:200] + "...")
+        print(f"API URL: {url}")
+        print(f"Model: {data['model']}")
+        print(f"Prompt prvih 200 karaktera: {prompt[:200]}...")
 
         resp = requests.post(url, headers=headers, json=data, timeout=30)
         print(f"API status code: {resp.status_code}")
-        print(f"Raw API response (prvih 500 karaktera):")
-        print(resp.text[:500] + "..." if len(resp.text) > 500 else resp.text)
+        print(f"Raw API response (ceo, prvih 800 karaktera):")
+        print(resp.text[:800] + "..." if len(resp.text) > 800 else resp.text)
 
         if resp.status_code != 200:
             print("API NIJE 200 – preskačem")
             return
 
         result_json = resp.json()
-        print("JSON uspešno parsovan!")
         result = result_json["choices"][0]["message"]["content"].strip()
+        print(f"Result sadržaj (prvih 200 karaktera): {result[:200]}...")
 
         if "NO_NEW_ALERTS" not in result.upper():
             print("Pronađen alert – šaljem na Telegram")
